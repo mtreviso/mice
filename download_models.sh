@@ -1,4 +1,4 @@
-for TASK in imdb newsgroups race
+for TASK in imdb
 do	
 	mkdir -p trained_predictors/${TASK}/model
 	mkdir -p results/${TASK}/editors/mice/

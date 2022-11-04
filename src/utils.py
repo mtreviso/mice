@@ -27,6 +27,7 @@ from munch import Munch
 
 # local imports
 from src.predictors.imdb.imdb_dataset_reader import ImdbDatasetReader
+from src.predictors.snli.snli_dataset_reader import SnliDatasetReader
 from src.predictors.newsgroups.newsgroups_dataset_reader \
         import NewsgroupsDatasetReader
 from src.predictors.race.race_dataset_reader import RaceDatasetReader
@@ -47,7 +48,7 @@ def get_shared_parsers():
     meta_parser.add_argument("-task", required=True, 
             help='Name of task. Currently, only RACE, IMDB, \
                     and Newsgroups are supported.', 
-            choices=['race', 'imdb', 'newsgroups'])
+            choices=['race', 'imdb', 'snli', 'newsgroups'])
     meta_parser.add_argument("-results_dir", default="results", 
             help='Results dir. Where to store results.')
 
@@ -70,8 +71,8 @@ def get_stage_one_parsers():
 
     train_parser = argparse.ArgumentParser()
     train_parser.add_argument("-train_batch_size", default=4, type=int)
-    train_parser.add_argument("-val_batch_size", default=1, type=int)
-    train_parser.add_argument("-num_epochs", default=10, type=int)
+    train_parser.add_argument("-val_batch_size", default=4, type=int)
+    train_parser.add_argument("-num_epochs", default=3, type=int)
     train_parser.add_argument("-lr", default=5e-5, type=float)
     train_parser.add_argument("-seed", default=42, type=int)
     train_parser.add_argument("-data_split_ratio", default=0.75, type=float)
@@ -98,7 +99,7 @@ def get_stage_two_parsers():
     search_parser = argparse.ArgumentParser()
     search_parser.add_argument("-max_mask_frac", default=0.55, 
             help="Maximum mask fraction")
-    search_parser.add_argument("-max_edit_rounds", default=3, 
+    search_parser.add_argument("-max_edit_rounds", default=3, type=int, 
             help="Maximum number of edit rounds")
     search_parser.add_argument("-max_search_levels", default=4, 
             help="Maximum number of search levels")
@@ -172,12 +173,16 @@ def write_args(args_path, args):
 ####################################################################
 
 def get_dataset_reader(task, predictor):
-    task_options = ["imdb", "race", "newsgroups"]
+    task_options = ["imdb", "race", "newsgroups", 'snli']
     if task not in task_options:
         raise NotImplementedError(f"Task {task} not implemented; \
                 must be one of {task_options}")
     if task == "imdb":
         return ImdbDatasetReader(
+                token_indexers=predictor._dataset_reader._token_indexers, 
+                tokenizer=predictor._dataset_reader._tokenizer)
+    elif task == "snli":
+        return SnliDatasetReader(
                 token_indexers=predictor._dataset_reader._token_indexers, 
                 tokenizer=predictor._dataset_reader._tokenizer)
     elif task == "race":
@@ -198,7 +203,7 @@ def format_multiple_choice_input(context, question, options, answer_idx):
     return formatted_str
 
 def load_predictor(task, predictor_folder="trained_predictors/"):
-    task_options = ["imdb", "race", "newsgroups"]
+    task_options = ["imdb", "race", "newsgroups", 'snli']
     if task not in task_options:
         raise NotImplementedError(f"Task {task} not implemented; \
                 must be one of {task_options}")
@@ -211,6 +216,7 @@ def load_predictor(task, predictor_folder="trained_predictors/"):
         "imdb": ImdbDatasetReader,
         "newsgroups": NewsgroupsDatasetReader,
         "race": RaceDatasetReader,
+        "snli": SnliDatasetReader,
     }
 
     cuda_device = 0 if torch.cuda.is_available() else -1

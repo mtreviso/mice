@@ -151,10 +151,20 @@ def run_edit_test(args):
             beam_width=args.search.beam_width, 
             max_mask_frac=args.search.max_mask_frac,
             search_method=args.search.search_method,
-            max_search_levels=args.search.max_search_levels)
+            max_search_levels=args.search.max_search_levels, verbose=False)
 
     # Get inputs
-    inputs = dr.get_inputs('test')
+    #inputs = dr.get_inputs('test')
+
+    def get_inputs_strs(fname):
+        strs = []
+        with open(fname, 'r', encoding='utf8') as f:
+            for line in f:
+                strs.append(line.strip())
+        return strs
+    print('>>>>>> loading samples from data/test_strs_{}.txt'.format(args.meta.task))
+    inputs = get_inputs_strs('data/test_strs_{}.txt'.format(args.meta.task))
+
     if "race" not in args.meta.task:
         inputs = [x for x in inputs if len(x) > 0 and re.search('[a-zA-Z]', x)]
 

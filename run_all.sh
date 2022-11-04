@@ -1,3 +1,9 @@
+## CUDA_VISIBLE_DEVICES=2 allennlp train src/predictors/snli/snli_roberta.json --include-package src.predictors.snli.snli_dataset_reader -s trained_predictors/models/snli/
+## CUDA_VISIBLE_DEVICES=2 python3 run_stage_one.py -task snli -stage1_exp mice_gold
+## CUDA_VISIBLE_DECIES=0 python3 run_stage_two.py -task imdb -stage2_exp mice_binary -editor_path results/imdb/editors/mice/imdb_editor.pth
+## CUDA_VISIBLE_DECIES=0 python3 run_stage_two.py -task imdb -stage2_exp mice_binary_no_search -editor_path results/imdb/editors/mice/imdb_editor.pth -max_edit_rounds 0
+
+
 ################################################################
 ####################### TRAIN PREDICTORS #######################
 ################################################################

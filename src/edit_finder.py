@@ -385,6 +385,11 @@ class EditFinder():
 
         edit_list = EditList(orig_input, editable_seg, orig_contrast_prob, 
                 orig_pred_label, contrast_label, orig_pred_idx)
+        
+        #import ipdb; ipdb.set_trace()
+        if max_edit_rounds == 0:
+            logger.info('Max edit rounds = 0, returning raw edits...')
+            return edit_list
 
         while new_pred_label != contrast_label:
             num_rounds += 1

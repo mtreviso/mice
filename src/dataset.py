@@ -78,7 +78,7 @@ class StageOneDataset(Dataset):
         for i, (orig_inp, orig_label) in tqdm(iterator, total=len(orig_inputs)):
             masker.mask_frac = np.random.choice(mask_fracs, 1, 
                     p=mask_frac_probs)[0] 
-
+            
             pred = predictor.predict(orig_inp)
             pred_label = pred['label']
 
@@ -110,6 +110,7 @@ class StageOneDataset(Dataset):
         self.masked_strings = masked_strings
         self.targets = targets
 
+        
 class RaceStageOneDataset(StageOneDataset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -189,6 +190,67 @@ class RaceStageOneDataset(StageOneDataset):
                 
             except MaskError:
                 num_errors += 1
+
+        self.masked_strings = masked_strings
+        self.targets = targets
+
+
+class SnliStageOneDataset(StageOneDataset):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def create_inputs(
+            self, orig_inputs, 
+            orig_labels, predictor, 
+            masker, target_label = "pred", 
+            mask_fracs=np.arange(0.2, 0.6, 0.05), 
+            mask_frac_probs=[0.125] * 8
+        ):
+        target_label_options = ["pred", "gold"]
+        if target_label not in target_label_options:
+            error_msg = f"target_label must be in {target_label_options} "
+            error_msg += f"but got '{target_label}'"
+            raise ValueError(error_msg)
+        
+        masked_strings, targets = [], []
+        labels_to_ints = get_labels_to_ints(predictor) 
+
+        num_errors = 0
+        iterator = enumerate(zip(orig_inputs, orig_labels))
+        for i, (orig_inp, orig_label) in tqdm(iterator, total=len(orig_inputs)):
+            masker.mask_frac = np.random.choice(mask_fracs, 1, p=mask_frac_probs)[0] 
+            
+            pred = predictor.predict(orig_inp)
+            pred_label = pred['label']
+
+            label_to_use = pred_label if target_label == "pred" else orig_label
+            label_idx = labels_to_ints[label_to_use]
+            
+            predictor_tokenized = get_predictor_tokenized(predictor, orig_inp.replace('[SEP]', '</s>'))
+            ell = [x.text for x in predictor_tokenized]
+            predictor_tok_end_idx = ell.index('</s>')
+          
+            try:
+                _, word_indices_to_mask, masked_input, target = masker.get_masked_string(
+                    orig_inp, 
+                    label_idx, 
+                    predictor_tok_end_idx=predictor_tok_end_idx
+                )
+                masked_string = format_classif_input(masked_input, label_to_use) 
+                masked_strings.append(masked_string)
+                targets.append(target)
+                
+            except MaskError:
+                num_errors += 1
+
+            verbose = True if i % 500 == 0 else False
+
+            if verbose:
+                rounded_mask_frac = round(masker.mask_frac, 3)
+                logger.info(wrap_text(f"Original input ({i}): " + orig_inp))
+                logger.info(wrap_text(f"Mask frac: {rounded_mask_frac}"))
+                logger.info(wrap_text(f"Editor input: {masked_string}"))
+                logger.info(wrap_text("Editor target: " + target))
 
         self.masked_strings = masked_strings
         self.targets = targets

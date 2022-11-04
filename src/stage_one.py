@@ -16,7 +16,7 @@ import sys
 
 # Local imports
 from src.masker import Masker, RandomMasker, GradientMasker
-from src.dataset import StageOneDataset, RaceStageOneDataset
+from src.dataset import StageOneDataset, RaceStageOneDataset, SnliStageOneDataset
 from src.utils import *
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -111,6 +111,15 @@ def get_datasets(predictor, dr, masker, data_dir, train_inputs, val_inputs,
                     max_length=args.model.model_max_length)
             val_dataset.create_inputs(dr, val_inputs, val_labels, predictor, 
                     masker, target_label=args.misc.target_label)
+        elif args.meta.task == "snli":
+            train_dataset = SnliStageOneDataset(editor_tokenizer, 
+                    max_length=args.model.model_max_length)
+            val_dataset = SnliStageOneDataset(editor_tokenizer, 
+                    max_length=args.model.model_max_length)
+            train_dataset.create_inputs(train_inputs, train_labels, predictor, 
+                    masker, target_label=args.misc.target_label)
+            val_dataset.create_inputs(val_inputs, val_labels, predictor, 
+                    masker, target_label=args.misc.target_label)
         else:
             train_dataset = StageOneDataset(editor_tokenizer, 
                     max_length=args.model.model_max_length)
@@ -164,6 +173,8 @@ def get_task_data(args, dr):
         strings = dr.get_inputs('train')
         labels = [int(s['answer_idx']) for s in strings]
     elif args.meta.task == "newsgroups" or args.meta.task == "imdb":
+        strings, labels = dr.get_inputs('train', return_labels=True)
+    elif args.meta.task == "snli":
         strings, labels = dr.get_inputs('train', return_labels=True)
     
     string_indices = np.array(range(len(strings)))
@@ -226,7 +237,9 @@ def run_train_editor(predictor, dr, args):
         'shuffle': False,
         'num_workers': 0
         }
-
+    
+    print(train_params)
+    print(val_params)
     optim = torch.optim.Adam(params=editor_model.parameters(), \
             lr=args.train.lr)
 
@@ -246,6 +259,7 @@ def run_train_editor(predictor, dr, args):
 
     best_path = os.path.join(checkpoint_dir, 'best.pth')
     best_val_loss = 1000000
+    logger.info("Training for {} epochs.".format(args.train.num_epochs))
     for epoch in range(args.train.num_epochs):
         path = os.path.join(checkpoint_dir, f"{epoch}.pth")
         if os.path.exists(path):

@@ -416,6 +416,8 @@ class GradientMasker(Masker):
             labeled_instance=None, 
             predic_tok_start_idx=None, 
             predic_tok_end_idx=None, 
+            predictor_tok_start_idx=None,    
+            predictor_tok_end_idx=None,
             num_return_toks=None):
         """ Gets Editor tokens that correspond to Predictor toks 
         with highest gradient values (with respect to pred_idx).
@@ -444,6 +446,10 @@ class GradientMasker(Masker):
                 Predictor tokens with highest gradients. 
             If not supplied, use self.mask_frac to calculate # tokens to return
         """
+        if predic_tok_start_idx is None and predictor_tok_start_idx is not None:
+            predic_tok_start_idx = predictor_tok_start_idx
+        if predic_tok_end_idx is None and predictor_tok_end_idx is not None:
+            predic_tok_end_idx = predictor_tok_end_idx
 
         integrated_grad_steps = self.num_integrated_grad_steps
 

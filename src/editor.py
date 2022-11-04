@@ -343,10 +343,11 @@ class Editor():
                 bad_tokens_ids = [[x] for x in range(
                                     sentinel_start, end_token_id)] + [[eos_id]]
                 max_length = max(int(4/3 * max_length), 200)
-                logger.info(wrap_text("Sub round: " + str(num_sub_rounds)))    
-                logger.info(wrap_text(f"Input: {inp_idx} of {num_inputs-1}"))
-                logger.info(wrap_text(f"Last sentinel: {last_sentin}"))
-                logger.info(wrap_text("INPUT TO EDITOR: " + \
+                if self.verbose:
+                    logger.info(wrap_text("Sub round: " + str(num_sub_rounds)))    
+                    logger.info(wrap_text(f"Input: {inp_idx} of {num_inputs-1}"))
+                    logger.info(wrap_text(f"Last sentinel: {last_sentin}"))
+                    logger.info(wrap_text("INPUT TO EDITOR: " + \
                         f"{self.tokenizer.decode(masked_token_ids)}"))
 
                 with torch.no_grad():
@@ -383,7 +384,8 @@ class Editor():
                 num_gens_with_pad = 0
                 num_bad_gens = 0
                 temp_edited_editable_segs = []
-                logger.info(wrap_text("first batch: " + batch_decoded[0]))
+                if self.verbose:
+                    logger.info(wrap_text("first batch: " + batch_decoded[0]))
                 for batch_idx, batch in enumerate(batch_decoded):
                     sentinel_toks = [f"<extra_id_{idx}>" for idx in \
                             range(0, span_end + 1)]
