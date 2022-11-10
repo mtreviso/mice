@@ -30,6 +30,7 @@ from src.editor import Editor, RaceEditor
 from src.predictors.imdb.imdb_dataset_reader import ImdbDatasetReader
 from src.predictors.newsgroups.newsgroups_dataset_reader import NewsgroupsDatasetReader
 from src.predictors.race.race_dataset_reader import RaceDatasetReader
+from src.predictors.predictor_utils import clean_text 
 
 logger = logging.getLogger("my-logger")
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -147,11 +148,13 @@ def run_edit_test(args):
     editor, predictor = load_models(args)
     dr = get_dataset_reader(args.meta.task, predictor)
     edit_evaluator = EditEvaluator()
-    edit_finder = EditFinder(predictor, editor, 
+    edit_finder = EditFinder(predictor, editor,
             beam_width=args.search.beam_width, 
             max_mask_frac=args.search.max_mask_frac,
             search_method=args.search.search_method,
-            max_search_levels=args.search.max_search_levels, verbose=False)
+            max_search_levels=args.search.max_search_levels, 
+            filter_by_validity=args.misc.filter_by_validity,
+            verbose=False)
 
     # Get inputs
     #inputs = dr.get_inputs('test')
@@ -160,7 +163,8 @@ def run_edit_test(args):
         strs = []
         with open(fname, 'r', encoding='utf8') as f:
             for line in f:
-                strs.append(line.strip())
+                txt = clean_text(line.strip(), special_chars=["<br />", "\t"])
+                strs.append(txt)
         return strs
     print('>>>>>> loading samples from data/test_strs_{}.txt'.format(args.meta.task))
     inputs = get_inputs_strs('data/test_strs_{}.txt'.format(args.meta.task))
@@ -189,18 +193,18 @@ def run_edit_test(args):
 
             start_time = time.time()
             error = False
-            try:
-                edited_list = edit_finder.minimally_edit(inp, 
-                        max_edit_rounds=args.search.max_edit_rounds, 
-                        edit_evaluator=edit_evaluator)
+#            try:
+            edited_list = edit_finder.minimally_edit(inp, 
+                    max_edit_rounds=args.search.max_edit_rounds, 
+                    edit_evaluator=edit_evaluator)
 
-                torch.cuda.empty_cache()
-                sorted_list = edited_list.get_sorted_edits() 
+            torch.cuda.empty_cache()
+            sorted_list = edited_list.get_sorted_edits() 
 
-            except Exception as e:
-                logger.info("ERROR: ", e)
-                error = True
-                sorted_list = []
+#            except Exception as e:
+#                logger.info(f"ERROR: {e}")
+#                error = True
+#                sorted_list = []
 
             end_time = time.time()
 

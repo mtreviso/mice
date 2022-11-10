@@ -89,19 +89,20 @@ def get_stage_two_parsers():
     generation_parser = argparse.ArgumentParser()
     generation_parser.add_argument("-generate_type", default="sample", 
             choices=['beam', 'sample'])
-    generation_parser.add_argument("-top_k", default=30)
-    generation_parser.add_argument("-top_p", default=0.95)
-    generation_parser.add_argument("-length_penalty", default=1.0)
-    generation_parser.add_argument("-generation_num_beams", default=15)
-    generation_parser.add_argument("-num_generations", default=15)
-    generation_parser.add_argument("-no_repeat_ngram_size", default=2)
+    generation_parser.add_argument("-top_k", default=30, type=int)
+    generation_parser.add_argument("-top_p", default=0.95, type=float)
+    generation_parser.add_argument("-length_penalty", default=1.0, type=float)
+    generation_parser.add_argument("-generation_num_beams", default=15, type=int)
+    generation_parser.add_argument("-num_generations", default=15, type=int)
+    generation_parser.add_argument("-no_repeat_ngram_size", default=2, type=int)
     
     search_parser = argparse.ArgumentParser()
-    search_parser.add_argument("-max_mask_frac", default=0.55, 
+    search_parser.add_argument("-max_mask_frac", default=0.55,
+            type=float,
             help="Maximum mask fraction")
     search_parser.add_argument("-max_edit_rounds", default=3, type=int, 
             help="Maximum number of edit rounds")
-    search_parser.add_argument("-max_search_levels", default=4, 
+    search_parser.add_argument("-max_search_levels", default=4, type=int, 
             help="Maximum number of search levels")
     search_parser.add_argument("-beam_width", default=3, 
             help="Beam width for beam search over edits.")
@@ -110,6 +111,10 @@ def get_stage_two_parsers():
             help="Which kind of search method to use: binary or linear.")
 
     misc_parser = argparse.ArgumentParser()
+    misc_parser.add_argument("-no_filter_by_validity",
+            action="store_false", dest="filter_by_validity",
+            help="Whether to only return edits that \
+                    are found to be actually flip the predictor label")
     misc_parser.add_argument("-grad_pred", default="original", 
             choices=["original", "contrast"], help="Whether to take gradient \
                     with respect to the contrast or original prediction")

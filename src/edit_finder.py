@@ -162,7 +162,8 @@ class EditFinder():
         search_method = "binary", 
         max_mask_frac = 0.5, 
         max_search_levels = 10, 
-        verbose = True 
+        verbose = True,
+        filter_by_validity = True,
     ):
         self.predictor = predictor
         self.editor = editor
@@ -172,6 +173,7 @@ class EditFinder():
         self.max_search_levels = max_search_levels
         self.device = get_device()
         self.verbose = verbose
+        self.filter_by_validity = filter_by_validity
         self.max_mask_frac = max_mask_frac 
 
     def run_edit_round(
@@ -229,7 +231,7 @@ class EditFinder():
 
             label = self.ints_to_labels[pred_idx]
             
-            if pred_idx == contrast_pred_idx:
+            if pred_idx == contrast_pred_idx or (not self.filter_by_validity):
                 found_cand = True
             
                 # Score minimality because we order edits by minimality scores
@@ -400,7 +402,7 @@ class EditFinder():
             for beam_elem_idx, (score, _, input_cand) in iterator: 
 
                 sys.stdout.flush()
-                logger.info(wrap_text("Updating beam for: {input_cand}"))
+                logger.info(wrap_text(f"Updating beam for: {input_cand}"))
                 logger.info(wrap_text(f"Edit round: {num_rounds} (1-indexed)"))
                 logger.info(wrap_text(f"Element {beam_elem_idx} of beam"))
                 logger.info(wrap_text(f"Contrast label: {contrast_label}"))
@@ -430,7 +432,7 @@ class EditFinder():
                             edit_evaluator=edit_evaluator)
                 
                 if len(edit_list.successful_edits) != 0:
-                    logger.info("Found edit at edit round: {num_rounds}")
+                    logger.info(f"Found edit at edit round: {num_rounds}")
                     return edit_list
 
                 logger.info("CURRENT BEAM after considering candidates: ")

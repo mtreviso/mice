@@ -34,7 +34,7 @@ class Editor():
         length_penalty = 0.5, 
         verbose = True, 
         prepend_label = True,
-        ints_to_labels = None
+        ints_to_labels = None,
     ):
         self.tokenizer = tokenizer
         self.device = get_device()
@@ -361,7 +361,7 @@ class Editor():
                             early_stopping=True, 
                             length_penalty=self.length_penalty, 
                             bad_words_ids=bad_tokens_ids, 
-                            max_length=max_length) 
+                            max_length=max_length)
 
                     elif self.generate_type == "sample":
                         output = self.editor_model.generate(
@@ -507,7 +507,7 @@ class RaceEditor(Editor):
             top_k = 50, 
             top_p = 0.92, 
             verbose = False, 
-            editable_key = "article"
+            editable_key = "article",
         ):
         super().__init__(
                 tokenizer_wrapper, tokenizer, editor_model, masker, 
