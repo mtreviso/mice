@@ -53,9 +53,13 @@ def get_shared_parsers():
             choices=['race', 'imdb', 'snli', 'newsgroups'])
     meta_parser.add_argument("-results_dir", default="results", 
             help='Results dir. Where to store results.')
-    meta_parser.add_argument("-predictor_dir", default="trained_predictors", 
+    meta_parser.add_argument("-predictor_dir", 
+            default="trained_predictors", 
             help='Results dir. Where to store results.')
-    meta_parser.add_argument("-predictor_name", default=None)
+    meta_parser.add_argument("-predictor_name", default=None, 
+            help="Determines Predictor class, only change to \
+                    use custom Predictor class (e.g. T5Predictor)", 
+            choices=[None, "t5_predictor"])
 
     mask_parser = argparse.ArgumentParser()
     mask_parser.add_argument("-mask_type", default="grad", 
@@ -69,7 +73,8 @@ def get_shared_parsers():
     model_parser = argparse.ArgumentParser()
     model_parser.add_argument("-model_max_length", default=700, 
             help="Maximum number of tokens that Editor model can take")
-    model_parser.add_argument("-editor_model_name", default="t5-base") 
+    model_parser.add_argument("-editor_model_name", default="t5-base",
+            help="Type of T5 model to use for Editor") 
     return {"meta": meta_parser, "mask": mask_parser, "model": model_parser}
 
 def get_stage_one_parsers():
