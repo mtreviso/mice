@@ -27,6 +27,8 @@ from munch import Munch
 
 # local imports
 from src.predictors.imdb.imdb_dataset_reader import ImdbDatasetReader
+from src.predictors.imdb.t5_classifier import T5Classifier
+from src.predictors.imdb.t5_predictor import T5Predictor 
 from src.predictors.snli.snli_dataset_reader import SnliDatasetReader
 from src.predictors.newsgroups.newsgroups_dataset_reader \
         import NewsgroupsDatasetReader
@@ -51,6 +53,9 @@ def get_shared_parsers():
             choices=['race', 'imdb', 'snli', 'newsgroups'])
     meta_parser.add_argument("-results_dir", default="results", 
             help='Results dir. Where to store results.')
+    meta_parser.add_argument("-predictor_dir", default="trained_predictors", 
+            help='Results dir. Where to store results.')
+    meta_parser.add_argument("-predictor_name", default=None)
 
     mask_parser = argparse.ArgumentParser()
     mask_parser.add_argument("-mask_type", default="grad", 
@@ -64,6 +69,7 @@ def get_shared_parsers():
     model_parser = argparse.ArgumentParser()
     model_parser.add_argument("-model_max_length", default=700, 
             help="Maximum number of tokens that Editor model can take")
+    model_parser.add_argument("-editor_model_name", default="t5-base") 
     return {"meta": meta_parser, "mask": mask_parser, "model": model_parser}
 
 def get_stage_one_parsers():
@@ -207,7 +213,9 @@ def format_multiple_choice_input(context, question, options, answer_idx):
         formatted_str += " choice" + str(option_idx) + ": " + option
     return formatted_str
 
-def load_predictor(task, predictor_folder="trained_predictors/"):
+def load_predictor(task, 
+        predictor_folder="trained_predictors",
+        predictor_name=None):
     task_options = ["imdb", "race", "newsgroups", 'snli']
     if task not in task_options:
         raise NotImplementedError(f"Task {task} not implemented; \
@@ -224,8 +232,18 @@ def load_predictor(task, predictor_folder="trained_predictors/"):
         "snli": SnliDatasetReader,
     }
 
+    def get_predictor_class(predictor_name):
+        if predictor_name == None:
+            return Predictor
+        elif predictor_name == "t5_predictor":
+            return T5Predictor
+        else:
+            raise ValueError
+
+    predictor_class = get_predictor_class(predictor_name)
+
     cuda_device = 0 if torch.cuda.is_available() else -1
-    predictor = Predictor.from_path(predictor_path, 
+    predictor = predictor_class.from_path(predictor_path, 
             dataset_reader_to_load=dr_map[task], 
             cuda_device=cuda_device, frozen=True)
     logger.info("Done loading predictor.")
@@ -235,11 +253,13 @@ def load_predictor(task, predictor_folder="trained_predictors/"):
 ########################### Model Utils ############################
 ####################################################################
 
-def load_base_t5(max_length=700):
-    t5_config = T5Config.from_pretrained("t5-base", n_positions=max_length)
-    model = T5ForConditionalGeneration.from_pretrained("t5-base", 
+def load_t5(model_name="t5-base", max_length=700):
+    logger.info(f"Loading T5 Model: {model_name}")
+    t5_config = T5Config.from_pretrained(model_name, n_positions=max_length)
+    model = T5ForConditionalGeneration.from_pretrained(model_name, 
             config=t5_config)
-    tokenizer = T5TokenizerFast.from_pretrained("t5-base", truncation=True)
+    tokenizer = T5TokenizerFast.from_pretrained(model_name, truncation=True)
+    logger.info("Done.")
     return tokenizer, model
 
 def get_device():

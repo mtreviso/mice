@@ -73,12 +73,17 @@ class StageOneDataset(Dataset):
         masked_strings, targets = [], []
         labels_to_ints = get_labels_to_ints(predictor) 
 
-        num_errors = 0
+        num_errors, num_empty = 0, 0
         iterator = enumerate(zip(orig_inputs, orig_labels))
         for i, (orig_inp, orig_label) in tqdm(iterator, total=len(orig_inputs)):
             masker.mask_frac = np.random.choice(mask_fracs, 1, 
                     p=mask_frac_probs)[0] 
-            
+      
+            # TODO: hacky, T5 predictor has error when string is empty, skip for now
+            if orig_inp == "":
+                num_empty += 1
+                continue
+
             pred = predictor.predict(orig_inp)
             pred_label = pred['label']
 
@@ -106,6 +111,10 @@ class StageOneDataset(Dataset):
                 logger.info(wrap_text(f"Mask frac: {rounded_mask_frac}"))
                 logger.info(wrap_text(f"Editor input: {masked_string}"))
                 logger.info(wrap_text("Editor target: " + target))
+
+        if verbose:
+            logger.info(wrap_text(f"Num errors: {num_errors}"))
+            logger.info(wrap_text(f"Num empty: {num_empty}"))
 
         self.masked_strings = masked_strings
         self.targets = targets

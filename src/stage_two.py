@@ -77,10 +77,11 @@ def load_models(args):
     """ Loads Predictor and Editor by task and other args """
 
     logger.info("Loading models...")
-    predictor = load_predictor(args.meta.task)
+    predictor = load_predictor(args.meta.task, predictor_folder=args.meta.predictor_dir, predictor_name=args.meta.predictor_name)
     editor_tokenizer_wrapper = PretrainedTransformerTokenizer(
             't5-base', max_length=args.model.model_max_length)
-    editor_tokenizer, editor_model = load_base_t5(
+    editor_tokenizer, editor_model = load_t5(
+                       model_name=args.model.editor_model_name)
                        max_length=args.model.model_max_length)
     device = get_device()
     editor_model = load_editor_weights(editor_model, args.meta.editor_path)

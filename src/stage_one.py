@@ -200,7 +200,8 @@ def run_train_editor(predictor, dr, args):
     np.random.seed(args.train.seed)
     torch.backends.cudnn.deterministic = True
 
-    editor_tokenizer, editor_model = load_base_t5(
+    editor_tokenizer, editor_model = load_t5(
+            model_name=args.model.editor_model_name,
             max_length=args.model.model_max_length)
     device = get_device()
     editor_model = editor_model.to(device)
