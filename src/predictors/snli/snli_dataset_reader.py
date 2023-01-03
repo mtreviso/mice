@@ -33,7 +33,8 @@ class SnliDatasetReader(DatasetReader):
         self, 
         token_indexers: Dict[str, TokenIndexer] = None,
         tokenizer: Optional[Tokenizer] = None,
-        data_dir = "data/snli", 
+        data_dir = "data/snli",
+        sep_token = "</s>",
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
@@ -43,6 +44,9 @@ class SnliDatasetReader(DatasetReader):
         self.train_file = os.path.join(self.data_dir, "train.jsonl")
         self.dev_file = os.path.join(self.data_dir, "dev.jsonl")
         self.test_file = os.path.join(self.data_dir, "test.jsonl")
+
+        # TODO: hacky, but sep_token determines token to use between premise & hyp
+        self.sep_token = sep_token
 
     def get_path(self, file_path):
         if file_path == "train":
@@ -65,7 +69,7 @@ class SnliDatasetReader(DatasetReader):
                 # These were cases where the annotators disagreed; we'll just
                 # skip them. It's like 800 / 500k examples in the train data
                 continue
-            tokens = premise + ' [SEP] ' + hypothesis
+            tokens = premise + f' {self.sep_token} ' + hypothesis
             yield self.text_to_instance(tokens, label)
 
     def get_inputs(self, file_path: str, return_labels: bool = False):
@@ -81,7 +85,7 @@ class SnliDatasetReader(DatasetReader):
                 # These were cases where the annotators disagreed; we'll just
                 # skip them. It's like 800 / 500k examples in the train data
                 continue
-            inputs.append(premise + ' [SEP] ' + hypothesis)
+            inputs.append(premise + f' {self.sep_token} ' + hypothesis)
             labels.append(label)
         if return_labels:
             return inputs, labels

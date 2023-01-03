@@ -106,6 +106,7 @@ class ImdbDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_path):
+        idx = 0
         np.random.seed(self.random_seed)
         tar_path = cached_path(self.TAR_URL)
         tf = tarfile.open(tar_path, 'r')
@@ -116,6 +117,9 @@ class ImdbDatasetReader(DatasetReader):
         path = self.get_path(file_path)
         for p in path:
             label = get_label(str(p))
+            idx += 1
+#            if idx > 300:
+#                break
             yield self.text_to_instance(
                     clean_text(p.read_text(), special_chars=["<br />", "\t"]), 
                     label)
@@ -127,4 +131,5 @@ class ImdbDatasetReader(DatasetReader):
         fields: Dict[str, Field] = {"tokens": text_field}
         if label is not None:
             fields["label"] = LabelField(label)
-        return Instance(fields)
+        instance = Instance(fields)
+        return instance

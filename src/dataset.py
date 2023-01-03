@@ -103,7 +103,7 @@ class StageOneDataset(Dataset):
             except MaskError:
                 num_errors += 1
 
-            verbose = True if i % 500 == 0 else False
+            verbose = True if i % 250 == 0 else False
 
             if verbose:
                 rounded_mask_frac = round(masker.mask_frac, 3)
@@ -235,15 +235,18 @@ class SnliStageOneDataset(StageOneDataset):
             label_to_use = pred_label if target_label == "pred" else orig_label
             label_idx = labels_to_ints[label_to_use]
             
-            predictor_tokenized = get_predictor_tokenized(predictor, orig_inp.replace('[SEP]', '</s>'))
-            ell = [x.text for x in predictor_tokenized]
-            predictor_tok_end_idx = ell.index('</s>')
+            predictor_tokenized = get_predictor_tokenized(predictor, orig_inp)
+#            predictor_tokenized = get_predictor_tokenized(predictor, orig_inp.replace('[SEP]', '</s>'))
+#            ell = [x.text for x in predictor_tokenized]
+#            predictor_tok_end_idx = ell.index('</s>')
           
             try:
                 _, word_indices_to_mask, masked_input, target = masker.get_masked_string(
                     orig_inp, 
                     label_idx, 
-                    predictor_tok_end_idx=predictor_tok_end_idx
+                    predictor_tok_end_idx=len(predictor_tokenized),
+                    str_predictor_filter_toks=["</s>"]
+ #                   predictor_tok_end_idx=predictor_tok_end_idx
                 )
                 masked_string = format_classif_input(masked_input, label_to_use) 
                 masked_strings.append(masked_string)

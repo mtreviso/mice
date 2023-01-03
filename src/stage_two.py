@@ -81,7 +81,7 @@ def load_models(args):
     editor_tokenizer_wrapper = PretrainedTransformerTokenizer(
             't5-base', max_length=args.model.model_max_length)
     editor_tokenizer, editor_model = load_t5(
-                       model_name=args.model.editor_model_name)
+                       model_name=args.model.editor_model_name,
                        max_length=args.model.model_max_length)
     device = get_device()
     editor_model = load_editor_weights(editor_model, args.meta.editor_path)
@@ -165,6 +165,7 @@ def run_edit_test(args):
         with open(fname, 'r', encoding='utf8') as f:
             for line in f:
                 txt = clean_text(line.strip(), special_chars=["<br />", "\t"])
+                txt = txt.replace("[SEP]", "</s>") # for SNLI; TODO: hacky, won't work for non-t5
                 strs.append(txt)
         return strs
     print('>>>>>> loading samples from data/test_strs_{}.txt'.format(args.meta.task))
@@ -197,7 +198,8 @@ def run_edit_test(args):
 #            try:
             edited_list = edit_finder.minimally_edit(inp, 
                     max_edit_rounds=args.search.max_edit_rounds, 
-                    edit_evaluator=edit_evaluator)
+                    edit_evaluator=edit_evaluator,
+                    contrast_pred_idx=args.misc.contrast_pred_idx)
 
             torch.cuda.empty_cache()
             sorted_list = edited_list.get_sorted_edits() 

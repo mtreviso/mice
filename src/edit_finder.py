@@ -184,7 +184,8 @@ class EditFinder():
         num_rounds, 
         mask_frac, 
         edit_evaluator=None,
-        sorted_token_indices=None
+        sorted_token_indices=None,
+        is_last_round=False,
     ):
         logger.info(wrap_text(f"Running candidate generation for mask frac: \
                 {mask_frac}; max mask frac: {self.max_mask_frac}"))
@@ -231,7 +232,9 @@ class EditFinder():
 
             label = self.ints_to_labels[pred_idx]
             
-            if pred_idx == contrast_pred_idx or (not self.filter_by_validity):
+            # If is not last round, only look at pred_idx == contrast_pred_idx
+            # If is last round, then if also not filtering by validity, always set found_cand = True and add candidate to edit
+            if pred_idx == contrast_pred_idx or (is_last_round and not self.filter_by_validity):
                 found_cand = True
             
                 # Score minimality because we order edits by minimality scores
@@ -272,10 +275,14 @@ class EditFinder():
 
         if self.verbose:
             logger.info(wrap_text("binary search mid: " + str(mid_mask_frac)))
+
+        is_last_round = (num_levels == max_levels)
+
         found_cand = self.run_edit_round(
                             edit_list, input_cand, contrast_pred_idx, num_rounds, 
                             mid_mask_frac, edit_evaluator=edit_evaluator,
-                            sorted_token_indices=sorted_token_indices)
+                            sorted_token_indices=sorted_token_indices,
+                            is_last_round=is_last_round)
         if self.verbose:
             logger.info(wrap_text("Binary search # levels: " + str(num_levels))) 
             logger.info(wrap_text("Found cand: " + str(found_cand)))
@@ -320,11 +327,13 @@ class EditFinder():
         mask_frac_iterator = np.arange(min_mask_frac+mask_frac_step, 
                                 max_mask_frac + mask_frac_step, 
                                 mask_frac_step)
-        for mask_frac in mask_frac_iterator: 
+        for iter_idx, mask_frac in enumerate(mask_frac_iterator): 
+            is_last_round = (iter_idx+1 == max_levels)
             found_cand = self.run_edit_round(
                     edit_list, input_cand, contrast_pred_idx, 
                     num_rounds, mask_frac, edit_evaluator=edit_evaluator,
-                    sorted_token_indices=sorted_token_indices)
+                    sorted_token_indices=sorted_token_indices,
+                    is_last_round=is_last_round)
             logger.info(wrap_text("Linear search mask_frac: " + str(mask_frac)))
             logger.info(wrap_text("Found cand: " + str(found_cand)))
             if found_cand:
@@ -372,6 +381,7 @@ class EditFinder():
         assert orig_pred_label == str(orig_pred_label)
 
         contrast_pred_idx = np.array(orig_probs).argsort()[contrast_pred_idx]
+        # TODO: add constraints based on gold label?
         contrast_label = self.ints_to_labels[contrast_pred_idx]
 
         orig_contrast_prob = get_prob_pred(orig_pred, contrast_pred_idx) 

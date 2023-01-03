@@ -5,6 +5,6 @@ from src.utils import get_args, load_predictor, get_dataset_reader
 if __name__ == '__main__':
 
     args = get_args("stage1")
-    predictor = load_predictor(args.meta.task)
+    predictor = load_predictor(args.meta.task, predictor_folder=args.meta.predictor_dir, predictor_name=args.meta.predictor_name)
     dr = get_dataset_reader(args.meta.task, predictor)
     run_train_editor(predictor, dr, args)

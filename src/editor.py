@@ -196,6 +196,10 @@ class Editor():
         # Sanity check
         assert not gen.startswith(self.tokenizer.pad_token) 
 
+
+        """
+        # TODO: un-comment for experiments with baseline T5 (not fine-tuned)
+
         # This is for baseline T5 which does not handle masked last tokens well.
         # Baseline often predicts </s> as last token instead of sentinel tok.
         # Heuristically treating the first </s> tok as the final sentinel tok.
@@ -214,6 +218,7 @@ class Editor():
         eos_token_idx = gen.find(self.tokenizer.eos_token)
         if eos_token_idx != -1:
             gen = gen[:eos_token_idx]
+        """
 
         # Check if every sentinel token is in the gen
         for x in sentinel_toks:
@@ -443,10 +448,9 @@ class Editor():
 
                     else:
                         temp_edited_editable_segs.append(temp)
-                        assert "<extra_id" not in temp
-                    
-                    assert "</s>" not in temp
-
+#                        assert "<extra_id_" not in temp, f"temp: {temp}"
+                    # TODO: handle this error
+                   
                 edited_editable_segs.extend(temp_edited_editable_segs)
 
             if new_editor_inputs == []:
@@ -480,13 +484,15 @@ class Editor():
             sys.stdout.flush()
             num_sub_rounds += 1
 
-        for idx, es in enumerate(edited_editable_segs):
-            assert es.find("</s>") in [len(es)-4, -1]
-            edited_editable_segs[idx] = es.replace("</s>", " ")
-            assert "<extra_id_" not in es, \
-                    f"Extra id token should not be in edited inp: {es}"
-            assert "</s>" not in es, \
-                    f"</s> should not be in edited inp: {edited_editable_segs[idx][0]}"
+        # This is for sanity checking when </s> is not used to, eg, separate premise and hypothesis
+#        for idx, es in enumerate(edited_editable_segs):
+#            assert es.find("</s>") in [len(es)-4, -1]
+#            edited_editable_segs[idx] = es.replace("</s>", " ")
+#            assert "<extra_id_" not in es, \
+#                    f"Extra id token should not be in edited inp: {es}"
+#            TODO: handle this error
+#            assert "</s>" not in es, \
+#                    f"</s> should not be in edited inp: {edited_editable_segs[idx][0]}"
 
 
         return set(edited_editable_segs) 

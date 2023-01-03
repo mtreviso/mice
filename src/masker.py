@@ -229,6 +229,8 @@ class GradientMasker(Masker):
         temp_tokenizer = self.predictor._dataset_reader._tokenizer
 
         # Used later to avoid skipping special tokens like <s>
+        # TODO: look into what these tokens are, checking equality with these tokens
+        # does more than checking if strings are equal, so eg, won't filter all "</s>" tokens
         self.predictor_special_toks = \
                 temp_tokenizer.sequence_pair_start_tokens + \
                 temp_tokenizer.sequence_pair_mid_tokens + \
@@ -418,7 +420,8 @@ class GradientMasker(Masker):
             predic_tok_end_idx=None, 
             predictor_tok_start_idx=None,    
             predictor_tok_end_idx=None,
-            num_return_toks=None):
+            num_return_toks=None,
+            str_predictor_filter_toks=["</s>"]):
         """ Gets Editor tokens that correspond to Predictor toks 
         with highest gradient values (with respect to pred_idx).
 
@@ -445,6 +448,8 @@ class GradientMasker(Masker):
             If set to value k, return k Editor tokens that correspond to 
                 Predictor tokens with highest gradients. 
             If not supplied, use self.mask_frac to calculate # tokens to return
+        str_predictor_filter_toks: list of strings
+            Do not mask these tokens, in addition to self.predictor_special_toks
         """
         if predic_tok_start_idx is None and predictor_tok_start_idx is not None:
             predic_tok_start_idx = predictor_tok_start_idx
@@ -524,12 +529,13 @@ class GradientMasker(Masker):
         
         # Order Predictor tokens from largest to smallest gradient values 
         ordered_predic_tok_indices = np.argsort(grad_magnitudes)[::-1]
-       
+      
         # List of tuples of (start, end) positions in the original inp to mask
         ordered_word_indices_by_grad = [self._get_word_positions(
             all_predic_toks[idx], editor_toks)[0] \
                     for idx in ordered_predic_tok_indices \
-                    if all_predic_toks[idx] not in self.predictor_special_toks]
+                    if all_predic_toks[idx] not in self.predictor_special_toks \
+                    and str(all_predic_toks[idx]) not in str_predictor_filter_toks]
         ordered_word_indices_by_grad = [item for sublist in \
                 ordered_word_indices_by_grad for item in sublist]
         

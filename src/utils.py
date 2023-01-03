@@ -27,8 +27,8 @@ from munch import Munch
 
 # local imports
 from src.predictors.imdb.imdb_dataset_reader import ImdbDatasetReader
-from src.predictors.imdb.t5_classifier import T5Classifier
-from src.predictors.imdb.t5_predictor import T5Predictor 
+from src.predictors.t5_classifier import T5Classifier
+from src.predictors.t5_predictor import T5Predictor 
 from src.predictors.snli.snli_dataset_reader import SnliDatasetReader
 from src.predictors.newsgroups.newsgroups_dataset_reader \
         import NewsgroupsDatasetReader
@@ -71,7 +71,7 @@ def get_shared_parsers():
                     l1/signed/l2 determine how to aggregate over the emb dim.")
 
     model_parser = argparse.ArgumentParser()
-    model_parser.add_argument("-model_max_length", default=700, 
+    model_parser.add_argument("-model_max_length", default=700, type=int, 
             help="Maximum number of tokens that Editor model can take")
     model_parser.add_argument("-editor_model_name", default="t5-base",
             help="Type of T5 model to use for Editor") 
@@ -81,10 +81,10 @@ def get_stage_one_parsers():
     """ Helper function to get parsers for Stage 1. """
 
     train_parser = argparse.ArgumentParser()
-    train_parser.add_argument("-train_batch_size", default=4, type=int)
-    train_parser.add_argument("-val_batch_size", default=4, type=int)
-    train_parser.add_argument("-num_epochs", default=3, type=int)
-    train_parser.add_argument("-lr", default=5e-5, type=float)
+    train_parser.add_argument("-train_batch_size", default=8, type=int)
+    train_parser.add_argument("-val_batch_size", default=8, type=int)
+    train_parser.add_argument("-num_epochs", default=10, type=int)
+    train_parser.add_argument("-lr", default=1e-4, type=float)
     train_parser.add_argument("-seed", default=42, type=int)
     train_parser.add_argument("-data_split_ratio", default=0.75, type=float)
 
@@ -126,6 +126,9 @@ def get_stage_two_parsers():
             action="store_false", dest="filter_by_validity",
             help="Whether to only return edits that \
                     are found to be actually flip the predictor label")
+    misc_parser.add_argument("-contrast_pred_idx", default=-2, 
+            type=int, help="Which label to use as the contrast. \
+                    Defaults to label with 2nd highest pred prob")
     misc_parser.add_argument("-grad_pred", default="original", 
             choices=["original", "contrast"], help="Whether to take gradient \
                     with respect to the contrast or original prediction")
