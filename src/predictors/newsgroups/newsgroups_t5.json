@@ -1,0 +1,46 @@
+{
+    "dataset_reader": {
+        "type": "newsgroups",
+        "token_indexers": {
+            "tokens": {
+                "type": "pretrained_transformer",
+                "max_length": 512,
+                "model_name": "t5-small"
+            }
+        },
+        "tokenizer": {
+            "type": "pretrained_transformer",
+            "max_length": 512,
+            "model_name": "t5-small"
+        }
+    },
+    "model": {
+        "type": "t5_classifier",
+        "namespace": "tags",
+	"model_name": "t5-small"
+    },
+    "train_data_path": "train",
+    "test_data_path": "test",
+    "trainer": {
+        "num_epochs": 5,
+	 "learning_rate_scheduler": {
+	    "type": "slanted_triangular",
+	    "cut_frac": 0.06		
+	},
+        "optimizer": {
+            "type": "huggingface_adamw",
+            "lr": 2e-05,
+            "weight_decay": 0.1
+        }
+    },
+    "evaluate_on_test": true,
+    "data_loader": {
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 8,
+            "sorting_keys": [
+                "tokens"
+            ]
+        }
+    }
+}

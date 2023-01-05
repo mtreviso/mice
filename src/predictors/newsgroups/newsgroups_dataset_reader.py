@@ -74,7 +74,7 @@ class NewsgroupsDatasetReader(DatasetReader):
             topic = newsgroups_data.target[idx]
             label = newsgroups_data['target_names'][topic].split(".")[0]
             txt = clean_text(txt, special_chars=["\n", "\t"])
-            if len(txt) == 0 or len(label) == 0:
+            if len(txt) == 0 or len(label) == 0 or txt.isspace():
                 strings[i] = None
                 labels[i] = None
             else:
@@ -92,13 +92,13 @@ class NewsgroupsDatasetReader(DatasetReader):
     @overrides
     def _read(self, subset):
         np.random.seed(self.random_seed)
-        data_indices = self.get_data_indices(subset)
+        data_indices, newsgroups_data = self.get_data_indices(subset)
         for idx in data_indices:
             txt = newsgroups_data.data[idx]
             topic = newsgroups_data.target[idx]
             label = newsgroups_data['target_names'][topic].split(".")[0]
             txt = clean_text(txt, special_chars=["\n", "\t"])
-            if len(txt) == 0 or len(label) == 0:
+            if len(txt) == 0 or len(label) == 0 or txt.isspace():
                 continue
             yield self.text_to_instance(txt, label)
 
