@@ -126,9 +126,20 @@ def get_stage_two_parsers():
             action="store_false", dest="filter_by_validity",
             help="Whether to only return edits that \
                     are found to be actually flip the predictor label")
-    misc_parser.add_argument("-contrast_pred_idx", default=-2, 
-            type=int, help="Which label to use as the contrast. \
-                    Defaults to label with 2nd highest pred prob")
+
+    def int_or_none(val):
+        if val == "None":
+            return None
+        else:
+            return int(val)
+
+    misc_parser.add_argument("-contrast_pred_idx", default=-2,  
+            type=int_or_none, help="Which label to use as the contrast. \
+                    Defaults to label with 2nd highest pred prob \
+                    If None, defaults to a) *not* gold label \
+                    for binary classification or \
+                    b) argmin() filtering out gold label for \
+                    multi-classification")
     misc_parser.add_argument("-grad_pred", default="original", 
             choices=["original", "contrast"], help="Whether to take gradient \
                     with respect to the contrast or original prediction")

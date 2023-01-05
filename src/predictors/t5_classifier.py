@@ -101,10 +101,13 @@ class T5Classifier(Model):
 #        print("\nafter input_ids", token_ids)
 #        print("\nafter input_ids", token_ids.shape)
 
-        encoder_outputs: T5StackOutput = self._seq2seq_encoder(
-                input_ids=token_ids,
-                attention_mask=attention_mask,
-        )
+        try:
+            encoder_outputs: T5StackOutput = self._seq2seq_encoder(
+                    input_ids=token_ids,
+                    attention_mask=attention_mask,
+            )
+        except:
+            print("token ids:", token_ids)
 
         encoder_outputs = encoder_outputs.last_hidden_state
 #        print("encoder_outputs.shape:", encoder_outputs.shape)

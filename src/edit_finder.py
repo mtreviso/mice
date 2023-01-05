@@ -169,6 +169,7 @@ class EditFinder():
         self.editor = editor
         self.beam_width = beam_width
         self.ints_to_labels = self.editor.ints_to_labels
+        self.labels_to_ints = get_labels_to_ints(predictor) 
         self.search_method = search_method 
         self.max_search_levels = max_search_levels
         self.device = get_device()
@@ -185,7 +186,7 @@ class EditFinder():
         mask_frac, 
         edit_evaluator=None,
         sorted_token_indices=None,
-        is_last_round=False,
+        return_all_edits=False,
     ):
         logger.info(wrap_text(f"Running candidate generation for mask frac: \
                 {mask_frac}; max mask frac: {self.max_mask_frac}"))
@@ -234,7 +235,7 @@ class EditFinder():
             
             # If is not last round, only look at pred_idx == contrast_pred_idx
             # If is last round, then if also not filtering by validity, always set found_cand = True and add candidate to edit
-            if pred_idx == contrast_pred_idx or (is_last_round and not self.filter_by_validity):
+            if pred_idx == contrast_pred_idx or return_all_edits:
                 found_cand = True
             
                 # Score minimality because we order edits by minimality scores
@@ -278,11 +279,16 @@ class EditFinder():
 
         is_last_round = (num_levels == max_levels)
 
+        # Return all edits if it is the last round and not filtering by validity
+        # For binary search, can't do this on other rounds because need to use to 
+        # use validity to determine masking percentage/
+        return_all_edits = (is_last_round and not self.filter_by_validity)
+
         found_cand = self.run_edit_round(
                             edit_list, input_cand, contrast_pred_idx, num_rounds, 
                             mid_mask_frac, edit_evaluator=edit_evaluator,
                             sorted_token_indices=sorted_token_indices,
-                            is_last_round=is_last_round)
+                            return_all_edits=return_all_edits)
         if self.verbose:
             logger.info(wrap_text("Binary search # levels: " + str(num_levels))) 
             logger.info(wrap_text("Found cand: " + str(found_cand)))
@@ -328,12 +334,14 @@ class EditFinder():
                                 max_mask_frac + mask_frac_step, 
                                 mask_frac_step)
         for iter_idx, mask_frac in enumerate(mask_frac_iterator): 
-            is_last_round = (iter_idx+1 == max_levels)
+            # At highest mask_frac,
+            # Return all edits if not filtering by validity
+            return_all_edits = not self.filter_by_validity
             found_cand = self.run_edit_round(
                     edit_list, input_cand, contrast_pred_idx, 
                     num_rounds, mask_frac, edit_evaluator=edit_evaluator,
                     sorted_token_indices=sorted_token_indices,
-                    is_last_round=is_last_round)
+                    return_all_edits=return_all_edits)
             logger.info(wrap_text("Linear search mask_frac: " + str(mask_frac)))
             logger.info(wrap_text("Found cand: " + str(found_cand)))
             if found_cand:
@@ -342,7 +350,8 @@ class EditFinder():
 
     def minimally_edit(
             self, orig_input, contrast_pred_idx = -2, 
-            max_edit_rounds = 10, edit_evaluator=None):
+            max_edit_rounds = 10, edit_evaluator=None,
+            gold_label=None):
 
         """ Gets minimal edits for given input. 
         Calls search algorithm (linear/binary) based on self.search_method.
@@ -364,6 +373,7 @@ class EditFinder():
         num_toks = len(get_predictor_tokenized(self.predictor, editable_seg))
         assert num_toks <= self.predictor._dataset_reader._tokenizer._max_length
 
+        # TODO: Look into </s> replace
         editable_seg = self.editor.tokenizer.decode(
                 self.editor.tokenizer.encode(editable_seg), 
                 clean_up_tokenization_spaces=True).replace("</s>", " ") 
@@ -379,15 +389,57 @@ class EditFinder():
         orig_pred_label = self.editor.ints_to_labels[orig_pred_idx] 
 
         assert orig_pred_label == str(orig_pred_label)
+        
+        if contrast_pred_idx is not None:
+            contrast_pred_idx = np.array(orig_probs).argsort()[contrast_pred_idx]
+            orig_contrast_prob = get_prob_pred(orig_pred, contrast_pred_idx) 
+            orig_contrast_prob = orig_pred['probs'][contrast_pred_idx]
 
-        contrast_pred_idx = np.array(orig_probs).argsort()[contrast_pred_idx]
+            assert orig_contrast_prob < 1.0
+
+            early_terminate = True # Whether to terminate if find edit that results in contrast label
+        # When contrast_pred_idx is None, use gold_label
+        else:
+            early_terminate = False 
+            if gold_label is None:
+                raise ValueError("If contrast_pred_idx is None, \
+                        gold_label must not be None")
+            gold_idx = self.labels_to_ints[gold_label]
+
+            # Binary classification
+            if len(orig_probs) == 2:
+                # Get the indices that are not the idx of the gold label
+                contrast_pred_idx = [idx for idx in \
+                        range(len(orig_probs)) if idx != gold_idx]
+                assert len(contrast_pred_idx) == 1
+                contrast_pred_idx = contrast_pred_idx[0]
+
+            # 
+            elif len(orig_probs) == 3:
+                sorted_idxes = np.array(orig_probs).argsort()
+                argmin = sorted_idxes[0]
+                argmax = sorted_idxes[-1]
+                # Set contrast pred to least likely label if not the gold label. Else, most likely label
+                if argmin != gold_idx:
+                    contrast_pred_idx = argmin
+                else:
+                    contrast_pred_idx = argmax
+                """
+                # Iterate through preds (least likely first) to find first that is not the gold label
+                for idx in sorted_idxes:
+                    if idx != gold_idx:
+                        contrast_pred_idx = idx
+                        break
+                """
+
+            else:
+                raise NotImplementedError()
+
         # TODO: add constraints based on gold label?
         contrast_label = self.ints_to_labels[contrast_pred_idx]
 
         orig_contrast_prob = get_prob_pred(orig_pred, contrast_pred_idx) 
         orig_contrast_prob = orig_pred['probs'][contrast_pred_idx]
-
-        assert orig_contrast_prob < 1.0
 
         num_rounds = 0
         new_pred_label = orig_pred_label
@@ -403,7 +455,20 @@ class EditFinder():
             logger.info('Max edit rounds = 0, returning raw edits...')
             return edit_list
 
-        while new_pred_label != contrast_label:
+        # If contrast_pred_idx is None, using gold label to determine contrast prediction,
+        # so ignore whether or not the label as flipped (through early_terminate = False).
+        # If contrast_pred_idx is based on original prediction 
+        # (i.e. contrast_pred_idx != None), then early_terminate is set to True, 
+        # then terminate when find a successful flip
+
+        # If early terminate and new pred == label: False 
+        # if early terminate and new_pred != label: True
+        # if not early terminate and new pred == label: True
+        # if not early terminate and new pred != label: True
+
+        # Will only exit while loop if new_pred_label == contrast_label and early terminate
+        # If early_terminate is not True or the labels aren't the same, continue
+        while (new_pred_label != contrast_label or not early_terminate):
             num_rounds += 1
             prev_beam = edit_list.beam.copy()
 

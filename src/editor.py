@@ -127,7 +127,7 @@ class Editor():
         of RACE) and edited editable segs (i.e. just the parts of inputs
         that are editable, articles in the case of RACE). """
        
-        assert targ_pred_idx != orig_pred_idx
+#        assert targ_pred_idx != orig_pred_idx
 
         if self.grad_pred == "contrast":
             grad_pred_idx = targ_pred_idx 

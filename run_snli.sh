@@ -34,32 +34,31 @@ CUDA_VISIBLE_DEVICES=6 python run_stage_one.py -task snli \
 
 ########### NO BINARY SEARCH ###########
 
-FRAC=$1
-#GENERATE=sample
-
-: '
-for GENERATE in sample beam
+for FRAC in 0.3 0.5
 do
-	CUDA_VISIBLE_DEVICES=7 python3 run_stage_two.py -task snli \
-		-stage2_exp mice_no_binary/0102/${FRAC}_${GENERATE} \
-		-predictor_dir ${PREDICTOR_DIR} \
-		-predictor_name t5_predictor \
-		-editor_path results/snli/editors/${STAGE1EXP}/checkpoints/best.pth \
-		-editor_model_name t5-small \
-		-max_search_levels 1 \
-		-search_method linear \
-		-max_mask_frac ${FRAC} \
-		-max_edit_rounds 1 \
-		-no_filter_by_validity \
-		-generate_type ${GENERATE} \
-		-top_k 50 \
-		-num_generations 1 \
-		-generation_num_beams 15 \
-		-no_repeat_ngram_size 2 \
-		-contrast_pred_idx -3
+	for GENERATE in sample beam
+	do
+		CUDA_VISIBLE_DEVICES=7 python3 run_stage_two.py -task snli \
+			-stage2_exp mice_no_binary/0105_gold_contrast/${FRAC}_${GENERATE} \
+			-predictor_dir ${PREDICTOR_DIR} \
+			-predictor_name t5_predictor \
+			-editor_path results/snli/editors/${STAGE1EXP}/checkpoints/best.pth \
+			-editor_model_name t5-small \
+			-max_search_levels 1 \
+			-search_method linear \
+			-max_mask_frac ${FRAC} \
+			-max_edit_rounds 1 \
+			-no_filter_by_validity \
+			-generate_type ${GENERATE} \
+			-top_k 50 \
+			-num_generations 1 \
+			-generation_num_beams 15 \
+			-no_repeat_ngram_size 2 \
+			-contrast_pred_idx None 
+	done
 done
 
- '
+
 ############ BINARY SEARCH ############
 : '
 Same hyperparams except binary-search-specific params: max_edit_rounds, max_mask_frac, max_search_levels, search_method
@@ -70,7 +69,7 @@ TODO: what about num_generations and no_filter_by_validity? -> set as same as cu
 for GENERATE in sample beam
 do
 	CUDA_VISIBLE_DEVICES=7 python3 run_stage_two.py -task snli \
-		-stage2_exp mice_binary/0102/${GENERATE} \
+		-stage2_exp mice_binary/0105_gold_contrast/${GENERATE} \
 		-predictor_dir ${PREDICTOR_DIR} \
 		-predictor_name t5_predictor \
 		-editor_path results/snli/editors/${STAGE1EXP}/checkpoints/best.pth \
@@ -81,5 +80,5 @@ do
 		-generation_num_beams 15 \
 		-no_filter_by_validity \
 		-no_repeat_ngram_size 2 \
-		-contrast_pred_idx -3
+		-contrast_pred_idx None 
 done

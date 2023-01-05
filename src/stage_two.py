@@ -168,11 +168,29 @@ def run_edit_test(args):
                 txt = txt.replace("[SEP]", "</s>") # for SNLI; TODO: hacky, won't work for non-t5
                 strs.append(txt)
         return strs
+
+    def get_input_labels(fname):
+        strs = []
+        with open(fname, 'r', encoding='utf8') as f:
+            for line in f:
+                lab = line.strip()
+                if args.meta.task == "imdb":
+                    if lab == "Positive":
+                        lab = "1"
+                    elif lab == "Negative":
+                        lab = "0"
+                    else:
+                        raise ValueError
+                strs.append(lab)
+        return strs
+
     print('>>>>>> loading samples from data/test_strs_{}.txt'.format(args.meta.task))
     inputs = get_inputs_strs('data/test_strs_{}.txt'.format(args.meta.task))
+    labels = get_input_labels('data/test_revised_{}_labels.txt'.format(args.meta.task))
 
     if "race" not in args.meta.task:
         inputs = [x for x in inputs if len(x) > 0 and re.search('[a-zA-Z]', x)]
+        labels = [y for x, y in zip(inputs, labels) if len(x) > 0 and re.search('[a-zA-Z]', x)]
 
     np.random.seed(0)
     input_indices = np.array(range(len(inputs)))
@@ -180,8 +198,9 @@ def run_edit_test(args):
 
     # Find edits and write to file
     with open(out_file, "w") as csv_file:
-        fieldnames = ["data_idx", "sorted_idx", "orig_pred", "new_pred", 
-                "contrast_pred", "orig_contrast_prob_pred", 
+        fieldnames = ["data_idx", "sorted_idx", 
+                "orig_pred", "new_pred", "gold_label", 
+                "contrast_label", "orig_contrast_prob_pred", 
                 "new_contrast_prob_pred", "orig_input", "edited_input", 
                 "orig_editable_seg", "edited_editable_seg", 
                 "minimality", "num_edit_rounds", "mask_frac", 
@@ -191,6 +210,7 @@ def run_edit_test(args):
 
         for idx, i in tqdm(enumerate(input_indices), total=len(input_indices)):
             inp = inputs[i]
+            gold_label = labels[i]
             logger.info(wrap_text(f"ORIGINAL INSTANCE ({i}): {inp}"))
 
             start_time = time.time()
@@ -199,7 +219,8 @@ def run_edit_test(args):
             edited_list = edit_finder.minimally_edit(inp, 
                     max_edit_rounds=args.search.max_edit_rounds, 
                     edit_evaluator=edit_evaluator,
-                    contrast_pred_idx=args.misc.contrast_pred_idx)
+                    contrast_pred_idx=args.misc.contrast_pred_idx, 
+                    gold_label=gold_label)
 
             torch.cuda.empty_cache()
             sorted_list = edited_list.get_sorted_edits() 
@@ -213,9 +234,13 @@ def run_edit_test(args):
 
             duration = end_time - start_time
             for s_idx, s in enumerate(sorted_list):
+                if s_idx == 0:
+                    logger.info(wrap_text(f"EDITED INSTANCE ({i}): {s['edited_input']}"))
                 writer.writerow([i, s_idx, edited_list.orig_label, 
-                    s['edited_label'], edited_list.contrast_label, 
-                    edited_list.orig_contrast_prob, s['edited_contrast_prob'], 
+                    s['edited_label'], 
+                    gold_label, edited_list.contrast_label, 
+                    edited_list.orig_contrast_prob, 
+                    s['edited_contrast_prob'], 
                     edited_list.orig_input, s['edited_input'], 
                     edited_list.orig_editable_seg, 
                     s['edited_editable_seg'], s['minimality'], 
